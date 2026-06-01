@@ -1,6 +1,6 @@
 # TW Arrow Nav
 
-Navigate the file explorer with the arrow keys and preview files without opening them.
+Navigate the Obsidian file explorer with a plugin-owned keyboard cursor, preview files and folders as you move, and open the anchored file with Enter.
 
 
 ## Support
@@ -9,10 +9,21 @@ If this plugin helps you, you can support development here: [Buy me a coffee](ht
 
 ## Features
 
-- Move through files and folders with the arrow keys.
-- Preview a file as you move without opening it.
-- Press Enter to open the file you selected.
-- Stay in control even after switching away from Obsidian and back again.
+- Click a file or folder in the explorer to establish the navigation cursor.
+- Use Arrow Up and Arrow Down to move through visible explorer items.
+- Use Arrow Left to collapse the current folder, or collapse the immediate parent folder of a nested file.
+- Use Arrow Right to expand the currently anchored folder.
+- Preview files while moving and show a simple folder summary when the cursor lands on a folder.
+- Press Enter to open the anchored file for editing.
+- Arrow handling stays out of the way while you are typing in inputs, textareas, contenteditable fields, and modal dialogs.
+- The navigation cursor resets when you click away from the explorer or when Obsidian loses visibility.
+
+## How It Works
+
+- The plugin owns one logical navigation anchor in the file explorer.
+- A lightweight plugin cursor marks that anchor instead of mutating Obsidian's internal focused or selected explorer classes.
+- File and folder previews reuse one retained workspace leaf.
+- Folder previews show direct and total file and subfolder counts.
 
 ## Install Locally
 
@@ -42,13 +53,14 @@ Copy the built files (`manifest.json`, `main.js`, and any assets) into that plug
 The npm package, plugin id, and public plugin name all use the same identity: `tw-arrow-nav` / `TW Arrow Nav`.
 
 Notes:
-- Arrow keys move the selection, and Enter opens the file.
-- The plugin stays out of the way while you are typing in a note, input, or editor.
+- The preview surface is reused for both file previews and folder summaries.
+- Enter opens the currently anchored file and clears the plugin cursor.
 
 ## Release Checklist
 
 - Build the plugin before publishing with `npm run build`.
 - Include `manifest.json` and `main.js` in the release.
+- Keep `manifest.json`, `package.json`, `package-lock.json`, and `versions.json` on the same plugin version.
 - Test it after minimizing and restoring Obsidian.
 
 ## License
