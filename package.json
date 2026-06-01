@@ -1,0 +1,25 @@
+{
+  "name": "tw-arrow-nav",
+  "version": "0.1.0",
+  "description": "Navigate the file explorer with the arrow keys and preview files without opening them.",
+  "main": "main.js",
+  "homepage": "https://github.com/teresewahlstrom/tw-arrow-nav",
+  "funding": "https://buymeacoffee.com/bytess",
+  "license": "MIT",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "obsidian": "^1.8.7",
+    "rollup": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "author": "Terese Wahlström and Mikael Holmgren"
+}

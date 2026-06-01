@@ -1,0 +1,11 @@
+{
+  "id": "tw-arrow-nav",
+  "name": "TW Arrow Nav",
+  "version": "0.1.0",
+  "minAppVersion": "1.12.7",
+  "description": "Navigate the file explorer with the arrow keys and preview files without opening them.",
+  "author": "Terese Wahlström and Mikael Holmgren",
+  "fundingUrl": "https://buymeacoffee.com/bytess",
+  "isDesktopOnly": true,
+  "main": "main.js"
+}
