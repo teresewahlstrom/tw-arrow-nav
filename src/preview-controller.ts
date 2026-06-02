@@ -23,6 +23,8 @@ export class PreviewController {
 	private previewLeaf: WorkspaceLeaf | null = null;
 	private previewRequestId = 0;
 	private previewTask: Promise<void> = Promise.resolve();
+	private cleanupLeafListeners: (() => void) | null = null;
+	public onPreviewCommitted: (() => void) | null = null;
 
 	constructor(private app: App) {}
 
@@ -30,10 +32,20 @@ export class PreviewController {
 		file: TFile,
 		activateEditor = false
 	): Promise<void> {
+		if (activateEditor) {
+			if (this.previewLeaf) {
+				this.convertPreviewToPermanent();
+			}
+			const activeLeaf = this.app.workspace.getLeaf(false);
+			await activeLeaf.openFile(file, { active: true, eState: { focus: true } });
+			this.app.workspace.setActiveLeaf(activeLeaf, { focus: true });
+			return;
+		}
+
 		await this.enqueuePreviewTarget({
 			kind: 'file',
 			file,
-			activateEditor,
+			activateEditor: false,
 		});
 	}
 
@@ -47,30 +59,17 @@ export class PreviewController {
 	}
 
 	getPreviewContainerEl(): HTMLElement | null {
-		return this.previewLeaf?.view?.containerEl || null;
+		return (this.previewLeaf as any)?.containerEl || null;
 	}
 
 	dispose(): void {
 		this.previewRequestId += 1;
-
-		/**
-		 * Do not detach the leaf:
-		 * it may be one of the user's normal editor panes.
-		 */
-		this.previewLeaf = null;
-
+		this.closePreviewLeaf();
 		this.app.workspace.detachLeavesOfType(
 			FOLDER_SUMMARY_VIEW_TYPE
 		);
 	}
 
-	/**
-	 * Check whether the retained WorkspaceLeaf still belongs to the workspace.
-	 *
-	 * Do not inspect previewLeaf.view.containerEl:
-	 * the view is expected to change whenever a document, image, or folder
-	 * overview replaces the previous preview inside the same leaf.
-	 */
 	private isWorkspaceLeafStillPresent(
 		targetLeaf: WorkspaceLeaf
 	): boolean {
@@ -87,12 +86,6 @@ export class PreviewController {
 		return found;
 	}
 
-	/**
-	 * Select one pane and retain that exact WorkspaceLeaf.
-	 *
-	 * All arrow previews replace content inside this leaf:
-	 * Markdown, images, PDFs, other native file views, and folder summaries.
-	 */
 	private getOrCreatePreviewLeaf(): WorkspaceLeaf {
 		if (
 			this.previewLeaf &&
@@ -103,10 +96,75 @@ export class PreviewController {
 			return this.previewLeaf;
 		}
 
-		this.previewLeaf =
-			this.app.workspace.getLeaf(false);
+		const activeEl = document.activeElement as HTMLElement | null;
+
+		const leaf = this.app.workspace.getLeaf('tab');
+		this.previewLeaf = leaf;
+		this.setupPreviewLeaf(leaf);
+
+		if (activeEl && typeof activeEl.focus === 'function') {
+			activeEl.focus();
+		}
 
 		return this.previewLeaf;
+	}
+
+	private setupPreviewLeaf(leaf: WorkspaceLeaf) {
+		(leaf as any).containerEl.classList.add('tw-arrow-nav-preview-leaf');
+		
+		const tabHeader = (leaf as any).tabHeaderEl as HTMLElement | undefined;
+		if (tabHeader) {
+			tabHeader.classList.add('tw-arrow-nav-preview-tab');
+		}
+
+		(leaf as any).isTWPreviewLeaf = true;
+
+		const onInteract = () => {
+			this.convertPreviewToPermanent();
+		};
+
+		(leaf as any).containerEl.addEventListener('click', onInteract);
+		(leaf as any).containerEl.addEventListener('focusin', onInteract);
+
+		this.cleanupLeafListeners = () => {
+			(leaf as any).containerEl.removeEventListener('click', onInteract);
+			(leaf as any).containerEl.removeEventListener('focusin', onInteract);
+		};
+	}
+
+	public convertPreviewToPermanent() {
+		if (!this.previewLeaf) return;
+
+		(this.previewLeaf as any).containerEl.classList.remove('tw-arrow-nav-preview-leaf');
+		
+		const tabHeader = (this.previewLeaf as any).tabHeaderEl as HTMLElement | undefined;
+		if (tabHeader) {
+			tabHeader.classList.remove('tw-arrow-nav-preview-tab');
+		}
+
+		delete (this.previewLeaf as any).isTWPreviewLeaf;
+
+		if (this.cleanupLeafListeners) {
+			this.cleanupLeafListeners();
+			this.cleanupLeafListeners = null;
+		}
+
+		this.previewLeaf = null;
+
+		if (this.onPreviewCommitted) {
+			this.onPreviewCommitted();
+		}
+	}
+
+	public closePreviewLeaf() {
+		if (this.previewLeaf) {
+			if (this.cleanupLeafListeners) {
+				this.cleanupLeafListeners();
+				this.cleanupLeafListeners = null;
+			}
+			this.previewLeaf.detach();
+			this.previewLeaf = null;
+		}
 	}
 
 	private enqueuePreviewTarget(
@@ -128,10 +186,6 @@ export class PreviewController {
 					this.getOrCreatePreviewLeaf();
 
 				if (target.kind === 'folder') {
-					/**
-					 * Folder overview replaces the current native file view
-					 * inside the retained preview leaf.
-					 */
 					await leaf.setViewState({
 						type:
 							FOLDER_SUMMARY_VIEW_TYPE,
@@ -145,28 +199,15 @@ export class PreviewController {
 					return;
 				}
 
-				/**
-				 * Documents, images, PDFs, and other supported file types use
-				 * Obsidian's native views inside the same retained leaf.
-				 */
 				await leaf.openFile(
 					target.file,
 					{
-						active:
-							target.activateEditor,
+						active: false,
 						eState: {
-							focus:
-								target.activateEditor,
+							focus: false,
 						},
 					}
 				);
-
-				if (target.activateEditor) {
-					this.app.workspace.setActiveLeaf(
-						leaf,
-						{ focus: true }
-					);
-				}
 			});
 
 		this.previewTask =

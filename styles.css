@@ -4,6 +4,14 @@
 	border-radius: var(--radius-s);
 }
 
+.workspace-tab-header.tw-arrow-nav-preview-tab {
+	border-top: 2px solid #e05252;
+}
+
+.workspace-tab-header.tw-arrow-nav-preview-tab .workspace-tab-header-inner-title {
+	color: #e05252 !important;
+}
+
 /* Folder Summary Dashboard Styling */
 .tw-folder-summary {
 	padding: 24px;

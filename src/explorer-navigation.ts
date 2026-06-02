@@ -19,6 +19,12 @@ export class ExplorerNavigation {
 	) {}
 
 	register(plugin: Plugin): void {
+		this.preview.onPreviewCommitted = () => {
+			this.navigationSessionActive = false;
+			this.deactivateNavigationKeys();
+			this.renderCursor();
+		};
+
 		plugin.registerDomEvent(document, 'pointerdown', this.documentPointerDownListener, true);
 		plugin.registerDomEvent(document, 'click', this.explorerClickListener);
 		plugin.registerDomEvent(document, 'focusin', this.documentFocusInListener, true);
@@ -31,6 +37,7 @@ export class ExplorerNavigation {
 	}
 
 	dispose(): void {
+		this.preview.onPreviewCommitted = null;
 		this.resetExplorerCursor();
 	}
 
@@ -69,6 +76,7 @@ export class ExplorerNavigation {
 		this.explorerRoot = null;
 		this.navigationSessionActive = false;
 		this.deactivateNavigationKeys();
+		this.preview.closePreviewLeaf();
 	};
 
 	private activateNavigationKeys() {
@@ -480,6 +488,9 @@ export class ExplorerNavigation {
 		if (!file) return;
 
 		this.consumeKey(evt);
+
+		this.preview.convertPreviewToPermanent();
+
 		this.navigationSessionActive = false;
 		this.deactivateNavigationKeys();
 		this.renderCursor();
