@@ -11,7 +11,7 @@ export class ExplorerNavigation {
 	private explorerRoot: HTMLElement | null = null;
 	private navigationSessionActive = false;
 	private isProgrammaticFolderToggle = false;
-	private cursorStyleElement: HTMLStyleElement | null = null;
+	private navigationKeyListenerActive = false;
 
 	constructor(
 		private app: App,
@@ -19,13 +19,6 @@ export class ExplorerNavigation {
 	) {}
 
 	register(plugin: Plugin): void {
-		this.installCursorStyles();
-
-		plugin.registerDomEvent(window, 'keydown', this.handleLeftArrow, true);
-		plugin.registerDomEvent(window, 'keydown', this.handleRightArrow, true);
-		plugin.registerDomEvent(window, 'keydown', this.handleArrowNavigation, true);
-		plugin.registerDomEvent(window, 'keydown', this.handleEnter, true);
-
 		plugin.registerDomEvent(document, 'pointerdown', this.documentPointerDownListener, true);
 		plugin.registerDomEvent(document, 'click', this.explorerClickListener);
 		plugin.registerDomEvent(document, 'focusin', this.documentFocusInListener, true);
@@ -39,29 +32,6 @@ export class ExplorerNavigation {
 
 	dispose(): void {
 		this.resetExplorerCursor();
-		this.removeCursorStyles();
-	}
-
-	private installCursorStyles() {
-		if (this.cursorStyleElement) return;
-
-		const existing = document.querySelector('style[data-tw-arrow-nav-cursor="true"]');
-		if (existing instanceof HTMLStyleElement) {
-			this.cursorStyleElement = existing;
-			return;
-		}
-
-		const style = document.createElement('style');
-		style.setAttribute('data-tw-arrow-nav-cursor', 'true');
-		style.textContent = '.tree-item-self.tw-arrow-nav-cursor { outline: 2px solid var(--interactive-accent); outline-offset: -2px; border-radius: var(--radius-s); }';
-
-		(document.head || document.body).appendChild(style);
-		this.cursorStyleElement = style;
-	}
-
-	private removeCursorStyles() {
-		this.cursorStyleElement?.remove();
-		this.cursorStyleElement = null;
 	}
 
 	private setNavAnchor(path: string | null) {
@@ -90,6 +60,7 @@ export class ExplorerNavigation {
 
 		this.explorerRoot = root;
 		this.navigationSessionActive = true;
+		this.activateNavigationKeys();
 	}
 
 	private resetExplorerCursor = () => {
@@ -97,7 +68,22 @@ export class ExplorerNavigation {
 		this.navAnchorPath = null;
 		this.explorerRoot = null;
 		this.navigationSessionActive = false;
+		this.deactivateNavigationKeys();
 	};
+
+	private activateNavigationKeys() {
+		if (this.navigationKeyListenerActive) return;
+
+		window.addEventListener('keydown', this.handleKeyDown, true);
+		this.navigationKeyListenerActive = true;
+	}
+
+	private deactivateNavigationKeys() {
+		if (!this.navigationKeyListenerActive) return;
+
+		window.removeEventListener('keydown', this.handleKeyDown, true);
+		this.navigationKeyListenerActive = false;
+	}
 
 	private getAllExplorerItems() {
 		if (!this.explorerRoot) return [];
@@ -122,7 +108,16 @@ export class ExplorerNavigation {
 	}
 
 	private getPathFromExplorerItem(item: HTMLElement): string | null {
-		return item.getAttribute('data-path') || item.closest<HTMLElement>('[data-path]')?.getAttribute('data-path') || null;
+		const directPath = item.getAttribute('data-path');
+		if (directPath) return directPath;
+
+		const row = item.closest('.tree-item-self') as HTMLElement | null;
+		if (!row) return null;
+
+		const rowPath = row.getAttribute('data-path');
+		if (rowPath) return rowPath;
+
+		return row.querySelector<HTMLElement>(':scope > [data-path]')?.getAttribute('data-path') || null;
 	}
 
 	private getExplorerItemFromEventTarget(el: HTMLElement | null): HTMLElement | null {
@@ -207,38 +202,41 @@ export class ExplorerNavigation {
 		const itemPath = this.getPathFromExplorerItem(item);
 		if (!itemPath) return null;
 
-		if (item.matches('.nav-folder-title')) {
-			const folderTreeItem = item.closest('.tree-item') as HTMLElement | null;
-			if (!folderTreeItem) return null;
+		const folderPath = item.matches('.nav-folder-title')
+			? itemPath
+			: this.getParentFolderPathForFileItem(item, itemPath);
 
-			return {
-				folderPath: itemPath,
-				folderTreeItem,
-			};
+		if (!folderPath) return null;
+
+		const folderItem = this.resolveVisibleNavItemByExactPath(folderPath);
+		if (!folderItem || !folderItem.matches('.nav-folder-title')) {
+			return null;
 		}
 
+		const folderTreeItem = folderItem.closest('.tree-item') as HTMLElement | null;
+		if (!folderTreeItem) return null;
+
+		return {
+			folderPath,
+			folderTreeItem,
+		};
+	}
+
+	private getParentFolderPathForFileItem(
+		item: HTMLElement,
+		filePath: string
+	): string | null {
 		if (!item.matches('.nav-file-title')) {
 			return null;
 		}
 
-		const fileTreeItem = item.closest('.tree-item') as HTMLElement | null;
-		if (!fileTreeItem) return null;
-
-		const containingFolderTreeItem = fileTreeItem.parentElement?.closest('.tree-item') as HTMLElement | null;
-		if (!containingFolderTreeItem) return null;
-
-		const folderRow = containingFolderTreeItem.querySelector(':scope > .tree-item-self') as HTMLElement | null;
-		if (!folderRow || !folderRow.matches('.nav-folder-title')) {
-			return null;
+		const abstractFile = this.app.vault.getAbstractFileByPath(filePath);
+		if (abstractFile instanceof TFile) {
+			return abstractFile.parent?.path || null;
 		}
 
-		const folderPath = this.getPathFromExplorerItem(folderRow);
-		if (!folderPath) return null;
-
-		return {
-			folderPath,
-			folderTreeItem: containingFolderTreeItem,
-		};
+		const slash = filePath.lastIndexOf('/');
+		return slash >= 0 ? filePath.slice(0, slash) : null;
 	}
 
 	private isTreeItemExpanded(treeItem: HTMLElement) {
@@ -312,8 +310,25 @@ export class ExplorerNavigation {
 		return false;
 	}
 
+	private handleKeyDown = (evt: KeyboardEvent) => {
+		switch (evt.key) {
+			case 'ArrowLeft':
+				this.handleLeftArrow(evt);
+				return;
+			case 'ArrowRight':
+				this.handleRightArrow(evt);
+				return;
+			case 'ArrowUp':
+			case 'ArrowDown':
+				this.handleArrowNavigation(evt);
+				return;
+			case 'Enter':
+				this.handleEnter(evt);
+				return;
+		}
+	};
+
 	private handleLeftArrow = (evt: KeyboardEvent) => {
-		if (evt.key !== 'ArrowLeft') return;
 		if (!this.navigationSessionActive || !this.explorerRoot || !this.navAnchorPath) return;
 		if (!this.explorerRoot.isConnected) {
 			this.resetExplorerCursor();
@@ -346,7 +361,6 @@ export class ExplorerNavigation {
 	};
 
 	private handleRightArrow = (evt: KeyboardEvent) => {
-		if (evt.key !== 'ArrowRight') return;
 		if (!this.navigationSessionActive || !this.explorerRoot || !this.navAnchorPath) return;
 		if (!this.explorerRoot.isConnected) {
 			this.resetExplorerCursor();
@@ -384,7 +398,6 @@ export class ExplorerNavigation {
 	};
 
 	private handleArrowNavigation = (evt: KeyboardEvent) => {
-		if (evt.key !== 'ArrowUp' && evt.key !== 'ArrowDown') return;
 		if (!this.navigationSessionActive || !this.explorerRoot || !this.navAnchorPath) return;
 		if (!this.explorerRoot.isConnected) {
 			this.resetExplorerCursor();
@@ -432,7 +445,6 @@ export class ExplorerNavigation {
 	};
 
 	private handleEnter = (evt: KeyboardEvent) => {
-		if (evt.key !== 'Enter') return;
 		if (!this.navigationSessionActive || !this.explorerRoot || !this.navAnchorPath) return;
 		if (!this.explorerRoot.isConnected) {
 			this.resetExplorerCursor();
@@ -447,6 +459,7 @@ export class ExplorerNavigation {
 
 		this.consumeKey(evt);
 		this.navigationSessionActive = false;
+		this.deactivateNavigationKeys();
 		this.renderCursor();
 
 		void this.preview.showFile(file, true);
