@@ -385,6 +385,28 @@ export class ExplorerNavigation {
 		if (!folderTreeItem) return;
 
 		if (this.isTreeItemExpanded(folderTreeItem)) {
+			const currentIndex = items.indexOf(currentItem);
+			if (currentIndex >= 0 && currentIndex < items.length - 1) {
+				const nextItem = items[currentIndex + 1];
+				if (folderTreeItem.contains(nextItem)) {
+					const nextPath = this.getPathFromExplorerItem(nextItem);
+					if (nextPath) {
+						this.setNavAnchor(nextPath);
+						try {
+							nextItem.scrollIntoView({ block: 'nearest' });
+						} catch {
+							// Ignore transient explorer DOM timing.
+						}
+
+						const file = this.getFileFromExplorerItem(nextItem);
+						if (file) {
+							this.showFilePreview(file, false);
+						} else if (nextItem.matches('.nav-folder-title')) {
+							this.showFolderPreview(nextPath);
+						}
+					}
+				}
+			}
 			return;
 		}
 
@@ -469,6 +491,10 @@ export class ExplorerNavigation {
 		const target = evt.target as HTMLElement | null;
 		if (!target) return;
 
+		if (target.closest('.collapse-icon')) {
+			return;
+		}
+
 		const explorerRoot = this.getExplorerRootFromElement(target);
 		if (!explorerRoot) {
 			this.resetExplorerCursor();
@@ -496,6 +522,10 @@ export class ExplorerNavigation {
 		const target = evt.target as HTMLElement | null;
 		if (!target) return;
 
+		if (target.closest('.collapse-icon')) {
+			return;
+		}
+
 		const explorerRoot = this.getExplorerRootFromElement(target);
 		if (!explorerRoot) return;
 
@@ -512,10 +542,6 @@ export class ExplorerNavigation {
 
 		this.setNavAnchor(path);
 
-		if (evt.target instanceof HTMLElement && evt.target.closest('.collapse-icon')) {
-			return;
-		}
-
 		if (explorerItem.matches('.nav-folder-title')) {
 			this.showFolderPreview(path);
 		}
@@ -526,6 +552,11 @@ export class ExplorerNavigation {
 		if (!target) return;
 
 		if (this.explorerRoot && this.explorerRoot.contains(target)) {
+			return;
+		}
+
+		const previewContainer = this.preview.getPreviewContainerEl();
+		if (previewContainer && previewContainer.contains(target)) {
 			return;
 		}
 

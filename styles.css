@@ -1,5 +1,154 @@
 .tree-item-self.tw-arrow-nav-cursor {
-	outline: 2px solid var(--interactive-accent);
+	outline: 2px solid #e05252;
 	outline-offset: -2px;
 	border-radius: var(--radius-s);
 }
+
+/* Folder Summary Dashboard Styling */
+.tw-folder-summary {
+	padding: 24px;
+	max-width: 800px;
+	margin: 0 auto;
+	font-family: var(--font-interface);
+	color: var(--text-normal);
+}
+
+.tw-folder-summary-header {
+	margin-bottom: 24px;
+	border-bottom: 1px solid var(--border-color);
+	padding-bottom: 16px;
+}
+
+.tw-folder-summary-title {
+	font-size: 1.8rem;
+	font-weight: 700;
+	margin: 0;
+	color: var(--text-normal);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.tw-folder-summary-path {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-top: 4px;
+	word-break: break-all;
+}
+
+.tw-folder-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 16px;
+	margin-bottom: 32px;
+}
+
+.tw-folder-summary-card {
+	background: var(--background-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-l);
+	padding: 20px;
+	box-shadow: var(--shadow-s);
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.tw-folder-summary-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-m);
+	border-color: var(--interactive-accent);
+}
+
+.tw-folder-summary-card-val {
+	font-size: 2.2rem;
+	font-weight: 800;
+	line-height: 1.1;
+	color: var(--interactive-accent);
+	margin-bottom: 6px;
+}
+
+.tw-folder-summary-card-lbl {
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.tw-folder-summary-card-sub {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
+/* Progress bar styling */
+.tw-folder-summary-progress-bar {
+	width: 100%;
+	background-color: var(--background-modifier-border);
+	border-radius: 4px;
+	height: 6px;
+	overflow: hidden;
+	margin-top: 8px;
+}
+
+.tw-folder-summary-progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
+	border-radius: 4px;
+	transition: width 0.3s ease;
+}
+
+/* Recent Activity Section */
+.tw-folder-summary-recent {
+	background: var(--background-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-l);
+	padding: 20px;
+}
+
+.tw-folder-summary-recent h3 {
+	margin-top: 0;
+	margin-bottom: 16px;
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: var(--text-normal);
+}
+
+.tw-folder-summary-recent-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.tw-folder-summary-recent-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-radius: var(--radius-m);
+	cursor: pointer;
+	transition: background-color 0.2s ease, padding-left 0.2s ease;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tw-folder-summary-recent-item:last-child {
+	border-bottom: none;
+}
+
+.tw-folder-summary-recent-item:hover {
+	background-color: var(--background-modifier-hover);
+	padding-left: 16px;
+}
+
+.tw-folder-summary-recent-item-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.tw-folder-summary-recent-item-time {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}

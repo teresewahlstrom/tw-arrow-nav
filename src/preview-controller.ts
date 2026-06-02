@@ -46,6 +46,10 @@ export class PreviewController {
 		});
 	}
 
+	getPreviewContainerEl(): HTMLElement | null {
+		return this.previewLeaf?.view?.containerEl || null;
+	}
+
 	dispose(): void {
 		this.previewRequestId += 1;
 
